@@ -2,6 +2,7 @@
 
 import os
 import asyncio
+import argparse
 from datetime import datetime, timedelta
 from time import sleep
 from typing import List
@@ -92,17 +93,16 @@ class Telegram:
             yield Group(self.client, peer, group.chat.id, group.chat.title)
 
 
-async def main():
+async def main(groups: list):
     client = Client(
-        session_name="client",
+        session_name=os.environ.get("TELEGRAM_SESSION"),
         api_id=os.environ.get("TELEGRAM_API_ID"),
         api_hash=os.environ.get("TELEGRAM_API_SECRET"))
+
     await client.start()
     try:
         telega = Telegram(client)
-        async for group in telega.groups(group_ids=[
-            -327267815  # Bund
-        ]):
+        async for group in telega.groups(group_ids=groups):
             print('-' * 100)
             print(
                 f'Deleting messages in group "{group.name}" ({group.chat_id}).'
@@ -116,5 +116,15 @@ async def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-g',
+        '--groups',
+        nargs='+',
+        type=int,
+        help='List of groups to clean',
+        required=True)
+    args = vars(parser.parse_args())
+
     print(f"Current time is {datetime.now()}.")
-    asyncio.get_event_loop().run_until_complete(main())
+    asyncio.get_event_loop().run_until_complete(main(args['groups']))
