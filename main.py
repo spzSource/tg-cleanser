@@ -39,20 +39,14 @@ class Group:
         self.peer = peer
 
     async def messages(self, page_size: int = 200):
-        q = await self.__search(0, page_size)
-        total_messages = len(q.messages)
+        offset = 0
+        
+        q = await self.__search(offset, page_size)
 
-        print(f'Total messages: {total_messages}.')
-
-        yield MessagePage(self.client, self.chat_id, q.messages)
-        if total_messages < page_size:
-            pass
-        else:
-            offset = page_size
-            for _ in range(0, total_messages, page_size):
-                q = await self.__search(offset, page_size)
-                yield MessagePage(self.client, self.chat_id, q.messages)
-                offset += page_size
+        while len(q.messages) > 0:
+            yield MessagePage(self.client, self.chat_id, q.messages)
+            offset += page_size
+            q = await self.__search(offset, page_size)
 
     async def __search(self, offset: int, number: int):
         print(f'Searching messages. Offset: {offset}')
