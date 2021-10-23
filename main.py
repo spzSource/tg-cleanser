@@ -40,7 +40,7 @@ class Group:
 
     async def messages(self, page_size: int = 200):
         offset = 0
-        
+
         q = await self.__search(offset, page_size)
 
         while len(q.messages) > 0:
@@ -75,19 +75,12 @@ class Telegram:
         self.client = client
 
     async def groups(self, group_ids: List[int]):
-        dialogs = await self.client.get_dialogs()
-        groups = [
-            dialog for dialog in dialogs
-            if (dialog.chat.type == 'supergroup' or dialog.chat.type == 'group')
-               and (len(group_ids) > 0 and dialog.chat.id in group_ids)
-        ]
-
-        for _, group in enumerate(groups):
-            peer = await self.client.resolve_peer(group.chat.id)
-            yield Group(self.client, peer, group.chat.id, group.chat.title)
+        for _, id in enumerate(group_ids):
+            (chat, peer) = await asyncio.gather(self.client.get_chat(id), self.client.resolve_peer(id))
+            yield Group(self.client, peer, chat.id, chat.title)
 
 
-async def main(groups: list):
+async def remove_messages(groups: list):
     client = Client(
         session_name=os.environ.get("TELEGRAM_SESSION"),
         api_id=os.environ.get("TELEGRAM_API_ID"),
@@ -109,16 +102,55 @@ async def main(groups: list):
         await client.stop()
 
 
+async def list_groups():
+    client = Client(
+        session_name=os.environ.get("TELEGRAM_SESSION"),
+        api_id=os.environ.get("TELEGRAM_API_ID"),
+        api_hash=os.environ.get("TELEGRAM_API_SECRET"))
+
+    await client.start()
+    try:
+        dialogs = await client.get_dialogs()
+        groups = [
+            dialog for dialog in dialogs
+            if (dialog.chat.type == 'supergroup' or dialog.chat.type == 'group')
+        ]
+        for _, g in enumerate(groups):
+            print(f'{g.chat.id} -> {g.chat.type} -> {g.chat.title}')
+        print([g.chat.id for g in groups])
+    finally:
+        await client.stop()
+
+
+class RemoveAction(argparse.Action):
+
+    def __call__(self, parser, namespace, values: list, option_string=None):
+        asyncio.get_event_loop().run_until_complete(
+            remove_messages(values)
+        )
+
+
+class ListAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        asyncio.get_event_loop().run_until_complete(
+            list_groups()
+        )
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
+    subparsers = parser.add_subparsers(help='commands')
+
+    remove_parser = subparsers.add_parser('remove', help='Remove messages in groups')
+    remove_parser.add_argument(
         '-g',
         '--groups',
+        action=RemoveAction,
         nargs='+',
         type=int,
         help='List of groups to clean',
         required=True)
-    args = vars(parser.parse_args())
 
-    print(f"Current time is {datetime.now()}.")
-    asyncio.get_event_loop().run_until_complete(main(args['groups']))
+    list_parser = subparsers.add_parser('list', help='List all available groups')
+    list_parser.add_argument('_', nargs=0, action=ListAction)
+    parser.parse_args()
