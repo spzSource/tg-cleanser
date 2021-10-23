@@ -12,7 +12,7 @@
 ```shell
 python main.py list
 ```
-2. Removed 1 day old messages from selected groups:
+2. Removes all messages older than 1 day:
 ```shell
 python main.py remove -g 1 2 3
 ```
