@@ -8,7 +8,7 @@
 4. Add `TELEGRAM_SESSION` env variable. It can contain any value **or** session string, like described here https://docs.pyrogram.org/topics/storage-engines#session-strings . Second option is useful when deploying the script to heroku.
 
 ## Commands:
-1. List all available groups/supergroups:
+1. Returns all available groups/supergroups:
 ```shell
 python main.py list
 ```
