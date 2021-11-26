@@ -57,7 +57,7 @@ class Group:
                        filter=InputMessagesFilterEmpty(),
                        min_date=0,
                        max_date=int(
-                           (datetime.today() - timedelta(days=1)).timestamp()),
+                           (datetime.today() - timedelta(hours=3)).timestamp()),
                        offset_id=0,
                        add_offset=offset,
                        limit=number,
