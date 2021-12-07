@@ -14,6 +14,6 @@ python main.py list
 ```
 2. Removed 1 day old messages from selected groups:
 ```shell
-python main.py remove -g 1 2 3
+python main.py remove -g 1 2 3 --exp 3h
 ```
         
