@@ -14,6 +14,6 @@ python main.py list
 ```
 2. Removes all messages older than 1 day:
 ```shell
-python main.py remove -g 1 2 3
+python main.py remove -g 1 2 3 --exp 3h
 ```
         

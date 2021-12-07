@@ -131,3 +131,5 @@ dmypy.json
 # IDE specifics
 /.idea
 /.vscode
+.DS_Store
+*.session
