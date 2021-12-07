@@ -147,6 +147,7 @@ if __name__ == '__main__':
         '-e',
         '--exp',
         type=str,
+        default='3h',
         help='Expiration time window',
         required=True)
     remove_parser.set_defaults(func=remove)
