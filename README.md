@@ -12,7 +12,7 @@
 ```shell
 python main.py list
 ```
-2. Removes all messages older than 1 day:
+2. Removes all messages older than specified time delta:
 ```shell
 python main.py remove -g 1 2 3 --exp 3h
 ```
