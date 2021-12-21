@@ -3,6 +3,7 @@
 import os
 import asyncio
 import argparse
+from pytimeparse import parse
 from datetime import datetime, timedelta
 from time import sleep
 from typing import List
@@ -38,17 +39,17 @@ class Group:
         self.chat_id = chat_id
         self.peer = peer
 
-    async def messages(self, page_size: int = 200):
+    async def messages(self, page_size: int = 200, exp_window: timedelta = timedelta(hours=3)):
         offset = 0
 
-        q = await self.__search(offset, page_size)
+        q = await self.__search(offset, page_size, exp_window)
 
         while len(q.messages) > 0:
             yield MessagePage(self.client, self.chat_id, q.messages)
             offset += page_size
-            q = await self.__search(offset, page_size)
+            q = await self.__search(offset, page_size, exp_window)
 
-    async def __search(self, offset: int, number: int):
+    async def __search(self, offset: int, number: int, exp_window: timedelta):
         print(f'Searching messages. Offset: {offset}')
         try:
             return await self.client.send(
@@ -56,8 +57,7 @@ class Group:
                        q='',
                        filter=InputMessagesFilterEmpty(),
                        min_date=0,
-                       max_date=int(
-                           (datetime.today() - timedelta(days=1)).timestamp()),
+                       max_date=int((datetime.today() - exp_window).timestamp()),
                        offset_id=0,
                        add_offset=offset,
                        limit=number,
@@ -80,7 +80,7 @@ class Telegram:
             yield Group(self.client, peer, chat.id, chat.title)
 
 
-async def remove_messages(groups: list):
+async def remove_messages(groups: list, exp_window: timedelta):
     client = Client(
         session_name=os.environ.get("TELEGRAM_SESSION"),
         api_id=os.environ.get("TELEGRAM_API_ID"),
@@ -94,7 +94,7 @@ async def remove_messages(groups: list):
             print(
                 f'Deleting messages in group "{group.name}" ({group.chat_id}).'
             )
-            async for message_page in group.messages(page_size=100):
+            async for message_page in group.messages(page_size=100, exp_window=exp_window):
                 print(f'Deleting messages. Batch size {len(message_page.messages)}.')
                 await message_page.remove()
                 print('-' * 50)
@@ -122,19 +122,13 @@ async def list_groups():
         await client.stop()
 
 
-class RemoveAction(argparse.Action):
-
-    def __call__(self, parser, namespace, values: list, option_string=None):
-        asyncio.get_event_loop().run_until_complete(
-            remove_messages(values)
-        )
+def remove(args):
+    asyncio.get_event_loop().run_until_complete(
+        remove_messages(args.groups, timedelta(seconds=parse(args.exp))))
 
 
-class ListAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        asyncio.get_event_loop().run_until_complete(
-            list_groups()
-        )
+def list(args):
+    asyncio.get_event_loop().run_until_complete(list_groups())
 
 
 if __name__ == '__main__':
@@ -145,12 +139,21 @@ if __name__ == '__main__':
     remove_parser.add_argument(
         '-g',
         '--groups',
-        action=RemoveAction,
         nargs='+',
         type=int,
         help='List of groups to clean',
         required=True)
+    remove_parser.add_argument(
+        '-e',
+        '--exp',
+        type=str,
+        default='3h',
+        help='Expiration time window',
+        required=True)
+    remove_parser.set_defaults(func=remove)
 
     list_parser = subparsers.add_parser('list', help='List all available groups')
-    list_parser.add_argument('_', nargs=0, action=ListAction)
-    parser.parse_args()
+    list_parser.set_defaults(func=list)
+    
+    args = parser.parse_args()
+    args.func(args)
